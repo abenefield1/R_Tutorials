@@ -84,4 +84,78 @@ print(system.time(out <- lsodes(state, times, Lorenz, parameters)))
 print(system.time(out <- daspk (state, times, Lorenz, parameters)))
 print(system.time(out <- vode (state, times, Lorenz, parameters)))
 ```
-## Runge-Kutta methods and Euler:
+## 2.1 Runge-Kutta methods and Euler:
+RK methods are de novo implementations. They comprise simple Runge-Kutta formulae (Euler’s method euler, Heun’s method rk2, the classical 4th order Runge-Kutta, rk4) and several Runge-Kutta pairs of order 3(2) to order 8(7). ode23 and ode45 are aliases for the popular methods rk23bs resp. rk45dp7. With the following statement all implemented methods are shown:
+```{r}
+rkMethod()
+```
+The properties of a Runge-Kutta method can be displayed as follows:
+```{r}
+rkMethod("rk23")
+```
+Here **varstep** informs whether the method uses a variable time-step; **FSAL** whether the first same as last strategy is used, while **stage** and **Qerr** give the number of function evaluations needed for one step, and the order of the local truncation error. **A**, **b1**, **b2**, **c** are the coefficients of the Butcher table. Two formulae (rk45dp7, rk45ck) support dense output. It is also possible to modify the parameters of a method (be very careful with this) or define and use a new Runge-Kutta method:
+```{r}
+func <- function(t, x, parms) {
+  with(as.list(c(parms, x)),{
+    dP <- a * P - b * C * P
+    dC <- b * P * C - c * C
+    res <- c(dP, dC)
+    list(res)
+    })
+}
+
+rKnew <- rkMethod(ID = "midpoint",
+                  varstep = FALSE,
+                  A = c(0, 1/2),
+                  b1 = c(0, 1),
+                  c = c(0, 1/2),
+                  stage = 2,
+                  Qerr = 1
+                  )
+
+out <- ode(y = c(P = 2, C = 1), times = 0:100, func,
+           parms = c(a = 0.1, b = 0.1, c = 0.1), method = rKnew)
+head(out)
+```
+
+### Fixed time-step methods:
+There are two explicit methods that do not adapt the time step: the euler method and the rk4 method. They are implemented in two ways:
+
+* as a **rkMethod** of the general rk solver. In this case the time step used can be specified independently from the times argument, by setting argument **hini**. Function **ode** uses this general code.
+* as special solver codes **euler** and **rk4**. These implementations are simplified and with less options to avoid overhead. The timestep used is determined by the time increment in the times argument.
+
+For example, the next two statements both trigger the Euler method, the first using the “special” code with a time step = 1, as imposed by the **times** argument, the second using the generalized method with a time step set by **hini**. Unsurprisingly, the first solution method completely fails (the time step = 1 is much too large for this problem).
+```{r}
+out <- euler(y = state, times = 0:40, func = Lorenz, parms = parameters)
+outb <- ode(y = state, times = 0:40, func = Lorenz, parms = parameters,
+            method = "euler", hini = 0.01)
+```
+
+## 2.2. Model diagnostics and summaries
+Function diagnostics prints several diagnostics of the simulation to the screen. For the Runge-Kutta and lsode routine called above they are:
+```{r}
+diagnostics(out1)
+diagnostics(out2)
+```
+There is also a summary method for deSolve objects. This is especially handy for multidimensional problems (see below):
+```{r}
+summary(out1)
+```
+
+# 3. Partial differential equations
+As package deSolve includes integrators that deal efficiently with arbitrarily sparse and banded Jacobians, it is especially well suited to solve initial value problems resulting from 1, 2 or 3-dimensional partial differential equations (PDE), using the method-of-lines approach. The PDEs are first written as ODEs, using finite differences. This can be efficiently done with functions from R-package **ReacTran**. However, here we will create the finite differences in R-code.
+Several special-purpose solvers are included in **deSolve**:
+
+* ode.band integrates 1-dimensional problems comprizing one species,
+* ode.1D integrates 1-dimensional problems comprizing one or many species,
+* ode.2D integrates 2-dimensional problems,
+* ode.3D integrates 3-dimensional problems.
+
+As an example, consider the Aphid model described in Soetaert and Herman (2009). It is a model where aphids slowly diffuse and grow on a row of plants. The model equations are:
+
+
+
+
+
+
+
